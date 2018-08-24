@@ -1,0 +1,9 @@
+version: "2"
+
+services:
+  clock:
+    build: .
+    image: osmso/clock
+    container_name: osmso-clock
+    ports:
+      - "3000:3000"
