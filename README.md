@@ -81,4 +81,6 @@ curl "GET http://localhost:3000/api/v1/timers/remind/jobs?num=15" \
 }
 ```
 
-默认,是将数据保存到内存中,这样的模式只供测试服务使用,如果想要
+默认,是将数据保存到内存中,这样的模式只供测试服务使用.
+如果在生产环境中使用,请将config.json
+    UseDB设置为true
