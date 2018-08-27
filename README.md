@@ -63,23 +63,8 @@ curl -X "POST" "http://localhost:3000/api/v1/timers/remind" \
 }'
 ```
 
-然后,当时间到了之后,在队列中,就会有相应的任务生成
+然后,当时间到了之后,在nsq队列中,就会有相应的任务生成
 你可以通过查询
-```
-curl "GET http://localhost:3000/api/v1/timers/remind/jobs?num=15" \
-     -H 'Content-Type: application/json; charset=utf-8' \
-     -d $'{}'
-```
-
-```
-{
-    "count":1,
-    "jobs":[{
-        "Job":"{\"A\":\"喝水\"}",
-        "Id":6129484611666145821
-    }]
-}
-```
 
 默认,是将数据保存到内存中,这样的模式只供测试服务使用.
 如果在生产环境中使用,请将config.json

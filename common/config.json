@@ -4,5 +4,6 @@
   "MysqlDBUser": "root",
   "MysqlDBPwd": "xxxxxx",
   "Database": "clock",
-  "UseDB": false
+  "UseDB": false,
+  "Queue": "vihv"
 }
