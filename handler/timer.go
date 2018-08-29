@@ -11,7 +11,6 @@ import (
 	"github.com/gorilla/mux"
 	"strconv"
 	"math/rand"
-	"fmt"
 )
 
 var God = make(map[string]*common.ClocksStore)
@@ -37,23 +36,17 @@ func InitDbClocks(clocks *([]models.ClockExt)) {
 	for _, clock := range *clocks {
 		x := 1000*500 + rand.Intn(1000*1000*5)
 		time.Sleep(time.Duration(x))
-		JobsQueue := MakerQueueMiddle(clock.Timer)
+		JobsQueue := Trans.Send(clock.Timer)
 		Timer := InitNewClocks(clock.Timer)
 
-		content := string(clock.Content.([]byte))
-		poptimes := clock.PopTimes
 		Timer.AddClock(clock.Tid, clock.Source, time.Second*time.Duration(clock.Interval), clock.Repeat, func() {
-			JobsQueue.Push(content, poptimes)
+			JobsQueue <- clock.Content.([]byte)
 		})
 	}
 }
 
 func NewClock(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	timer := vars["timer"]
-
-	JobsQueue := MakerQueue(r)
-	Timer := initClocks(r)
+	timer := Timer(r)
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -69,7 +62,6 @@ func NewClock(w http.ResponseWriter, r *http.Request) {
 	}
 
 	content, err := json.Marshal(clock.Content)
-	fmt.Println(string(content))
 	if err != nil {
 		ErrorResponse(w, err)
 		return
@@ -81,8 +73,11 @@ func NewClock(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	JobsQueue := Trans.Send(timer)
+	Timer := initClocks(r)
+
 	success, err, id := Timer.AddClock(clock.Tid, string(store), time.Second*time.Duration(clock.Interval), clock.Repeat, func() {
-		JobsQueue.Push(string(content), clock.PopTimes)
+		JobsQueue <- content
 	})
 
 	if err != nil {
@@ -108,9 +103,7 @@ func NewClock(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateClock(w http.ResponseWriter, r *http.Request) {
-	JobsQueue := MakerQueue(r)
-	vars := mux.Vars(r)
-	timer := vars["timer"]
+	timer := Timer(r)
 
 	_, ok := God[timer]
 	if ok {
@@ -145,8 +138,9 @@ func UpdateClock(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	JobsQueue := Trans.Send(timer)
 	success, err, id := God[timer].AddClock(clock.Tid, string(store), time.Second*time.Duration(clock.Interval), clock.Repeat, func() {
-		JobsQueue.Push(string(content), clock.PopTimes)
+		JobsQueue <- content
 	})
 
 	if err != nil {
@@ -172,8 +166,7 @@ func UpdateClock(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetClock(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	timer := vars["timer"]
+	timer := Timer(r)
 
 	vals := r.URL.Query()
 
@@ -215,8 +208,7 @@ func GetClock(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteClock(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	timer := vars["timer"]
+	timer := Timer(r)
 
 	_, ok := God[timer]
 	if !ok {
@@ -246,8 +238,7 @@ func DeleteClock(w http.ResponseWriter, r *http.Request) {
 }
 
 func CleanTimer(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	timer := vars["timer"]
+	timer := Timer(r)
 
 	_, ok := God[timer]
 	if ok {
@@ -279,9 +270,7 @@ func GetTimers(w http.ResponseWriter, r *http.Request) {
 
 func ClocksCounts(w http.ResponseWriter, r *http.Request) {
 
-	vars := mux.Vars(r)
-	timer := vars["timer"]
-
+	timer := Timer(r)
 	_, ok := God[timer]
 	if ok {
 		bytes, err := json.Marshal(map[string]interface{}{"counts": God[timer].GetClockNum()})
@@ -305,4 +294,10 @@ func writeJsonResponse(w http.ResponseWriter, bytes []byte) {
 func ErrorResponse(w http.ResponseWriter, err error) {
 	http.Error(w, err.Error(), http.StatusInternalServerError)
 	w.WriteHeader(http.StatusExpectationFailed)
+}
+
+func Timer(r *http.Request) string{
+	vars := mux.Vars(r)
+	timer := vars["timer"]
+	return timer
 }

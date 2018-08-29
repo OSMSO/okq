@@ -4,10 +4,13 @@ import (
 	"os"
 	"log"
 	"encoding/json"
+	"path"
+	"runtime"
 )
 
 type (
 	configuration struct {
+		NsqHost     string
 		Server      string
 		MysqlDBHost string
 		MysqlDBUser string
@@ -22,7 +25,8 @@ var AppConfig configuration
 
 // init Config file
 func InitConfig() {
-	file, err := os.Open("common/config.json")
+	_, filename, _, _ := runtime.Caller(1)
+	file, err := os.Open(path.Join(path.Dir(filename), "common/config.json"))
 	defer file.Close()
 	if err != nil {
 		log.Fatalf("[loadConfig]: %s\n", err)

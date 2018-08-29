@@ -1,18 +1,19 @@
 // Package nsq provides a Vice implementation for NSQ.
-package common
+package handler
 
 import (
 	"sync"
 	"time"
 	"fmt"
+	"github.com/osmso/clock/common"
 	"github.com/nsqio/go-nsq"
 )
 
+var Trans = &(Transport{})
+
 // DefaultTCPAddr is the default NSQ TCP address
-const DefaultTCPAddr = "123.206.232.202:4150"
 
 // Err represents a vice error.
-// Err 表示vice错误
 type Err struct {
 	Message []byte
 	Name    string
@@ -28,11 +29,9 @@ func (e Err) Error() string {
 
 // Transport is a vice.Transport for NSQ.
 type Transport struct {
-	// sendmessage 互斥锁
 	sm        sync.Mutex
 	sendChans map[string]chan []byte
 
-	// recivemessage 互斥锁
 	rm           sync.Mutex
 	receiveChans map[string]chan []byte
 
@@ -60,20 +59,8 @@ type Transport struct {
 }
 
 // New makes a new Transport.
-// 新建一个Transport
-func New() *Transport {
-
-	// 新建一个Transport
-	// sendChans是  字符串  []byte类型chan的映射
-	// receiveChans是 字符串 []byte了下chan的映射
-
-	// stopchan是一个chan结构体
-	// stopProchan是一个chan结构体
-	// errchan是一个error chan
-
-	// consumer是nsq的消费者
-	//
-	return &Transport{
+func NewNsqTrans(DefaultTCPAddr string) {
+	Trans = &Transport{
 		sendChans:    make(map[string]chan []byte),
 		receiveChans: make(map[string]chan []byte),
 
@@ -135,7 +122,7 @@ func (t *Transport) makeConsumer(name string) (chan []byte, error) {
 		return nil
 	}))
 
-	err = Do(1*time.Second, 10*time.Minute, 0, func() error {
+	err = common.Do(1*time.Second, 10*time.Minute, 0, func() error {
 		return t.ConnectConsumer(consumer)
 	})
 	if err != nil {
@@ -147,7 +134,7 @@ func (t *Transport) makeConsumer(name string) (chan []byte, error) {
 
 // Send gets a channel on which messages with the
 // specified name may be sent.
-func (t *Transport) Send(name string) chan<- []byte {
+func (t *Transport) Send(name string) (chan<- []byte) {
 	t.sm.Lock()
 	defer t.sm.Unlock()
 
@@ -185,7 +172,7 @@ func (t *Transport) makeProducer(name string) (chan []byte, error) {
 			case <-t.stopProdChan:
 				return
 			case msg := <-ch:
-				err = Do(1*time.Second, 10*time.Minute, 10, func() error {
+				err = common.Do(1*time.Second, 10*time.Minute, 10, func() error {
 					return producer.Publish(name, msg)
 				})
 				if err != nil {

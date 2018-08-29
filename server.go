@@ -6,17 +6,16 @@ import (
 	"github.com/osmso/clock/handler"
 	"github.com/osmso/clock/common"
 	"github.com/osmso/clock/database"
-	"log"
 )
 
 func main() {
 	common.InitConfig()
+	handler.NewNsqTrans(common.AppConfig.NsqHost)
+
 	if common.AppConfig.UseDB {
 		go func() {
-			log.Println("UseDB Init")
 			clocks := database.Init()
 			handler.InitDbClocks(clocks)
-			log.Println("DB clock Init Finish")
 		}()
 	}
 
